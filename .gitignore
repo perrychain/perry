@@ -24,3 +24,5 @@
 .wallet.json
 config/blockchain-db.json
 .blockchain-db.json
+bin/perry
+bin/poh-golang

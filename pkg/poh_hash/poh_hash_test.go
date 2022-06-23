@@ -17,8 +17,8 @@ var geneisis_hash string
 var count = 10_000_000
 var tick_size = 1_000_000
 
-var wallet_path = "../../config/test-wallet.json"
-var db_path = "../../config/blockchain-db.json"
+var wallet_path = "../../config/tests/test-wallet.json"
+var db_path = "../../config/tests/blockchain-db.json"
 
 func TestDataVerification(t *testing.T) {
 
