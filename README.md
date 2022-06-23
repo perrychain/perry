@@ -24,6 +24,6 @@ Launch an instance of the Perry blockchain
 ## Roadmap
 
 - [X] Alpha version release
-- [] Full client/server implementation for v1 release
-- [] API documentation
-- [] Example applications to interface with the Perry messaging blockchain
+- [ ] Full client/server implementation for v1 release
+- [ ] API documentation
+- [ ] Example applications to interface with the Perry messaging blockchain
