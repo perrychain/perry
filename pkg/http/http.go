@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/perrychain/perry/pkg/p2pnet"
 	"github.com/perrychain/perry/pkg/poh_hash"
+	log "github.com/sirupsen/logrus"
 )
 
 type HTTP struct {
@@ -54,7 +55,6 @@ func (http HTTP) Serve() {
 
 	// Launch peer query
 	go func() {
-
 		p2p.QueryPeers(context.Background())
 
 	}()
@@ -88,6 +88,7 @@ func (http HTTP) Serve() {
 	//router.GET("/p2p/nodes", poh.state)
 	//router.GET("/p2p/status", poh.state)
 
+	log.Info("Launching service on ", fmt.Sprintf("%s:%d", http.RPC_Node.Host, http.RPC_Node.Port))
 	router.Run(fmt.Sprintf("%s:%d", http.RPC_Node.Host, http.RPC_Node.Port))
 
 }

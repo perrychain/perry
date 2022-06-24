@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Hash [32]byte
@@ -69,7 +69,7 @@ func (blockdb *BlockDB) Open() (err error) {
 		return
 	}
 
-	fmt.Println("Opening => ", blockdb.Filename)
+	log.Debug("Opening => ", blockdb.Filename)
 
 	// Open the specified file, create a new file if missing
 	f, err := os.OpenFile(blockdb.Filename, os.O_RDONLY|os.O_CREATE, 0755)
@@ -130,7 +130,7 @@ func (blockdb *BlockDB) Verify() (err error) {
 
 	blockdb.Mu.RLock()
 
-	fmt.Printf("Verifying (%d) block signatures on disk ...", len(blockdb.Blocks))
+	log.Debug("Verifying (%d) block signatures on disk ...", len(blockdb.Blocks))
 
 	var currentHash Hash
 
@@ -158,14 +158,14 @@ func (blockdb *BlockDB) Verify() (err error) {
 		checksum := h.Sum(nil)
 
 		if !bytes.Equal(checksum, currentBlock.Key[:]) {
-			fmt.Println("Checksum does not match ", i, " => ", checksum, currentBlock.Key)
+			log.Warn("Checksum does not match ", i, " => ", checksum, currentBlock.Key)
 		}
 
 	}
 
 	blockdb.Mu.RUnlock()
 
-	fmt.Printf(" done\n")
+	log.Debug(" done\n")
 	return
 
 }
@@ -197,7 +197,7 @@ func (blockdb *BlockDB) Sync(from []byte) (id int) {
 		//fmt.Println("Searching ", i)
 
 		if bytes.Equal(blockdb.Blocks[i].Value.Header.Parent[:], from[:]) {
-			//fmt.Println("WE HAVE A MATCH!", i)
+			log.Debug("Sync => Found match: ", i)
 			return i
 		}
 

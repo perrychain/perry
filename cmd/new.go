@@ -3,9 +3,9 @@ package cmd
 import (
 	"encoding/base64"
 	"fmt"
-	"log"
 
 	"github.com/perrychain/perry/pkg/wallet"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -17,11 +17,11 @@ var newCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		force, _ := cmd.Flags().GetBool("force")
-		path, _ := cmd.Flags().GetString("path")
+		walletPath, _ := cmd.Flags().GetString("wallet")
 		name, _ := cmd.Flags().GetString("name")
 
-		if path == "" {
-			path = ".wallet.json"
+		if walletPath == "" {
+			walletPath = "~/.perry-wallet.json"
 		}
 
 		mywallet := wallet.New()
@@ -33,13 +33,13 @@ var newCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		err = mywallet.Save(path, force)
+		err = mywallet.Save(walletPath, force)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fmt.Printf("New wallet saved in %s\n", path)
+		fmt.Printf("New wallet saved in %s\n", walletPath)
 		fmt.Println("Your wallet public key is:")
 		fmt.Printf("%s\n", base64.StdEncoding.Strict().EncodeToString(mywallet.PublicKey))
 
@@ -50,7 +50,6 @@ func init() {
 	keygenCmd.AddCommand(newCmd)
 
 	newCmd.Flags().BoolP("force", "f", false, "Force overwrite")
-	newCmd.Flags().StringP("path", "p", ".wallet.json", "Wallet filename")
 	newCmd.Flags().StringP("name", "n", "My Wallet", "Wallet identifier name (My wallet)")
 
 }

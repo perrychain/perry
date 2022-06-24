@@ -23,7 +23,7 @@ var db_path = "../../config/tests/blockchain-db.json"
 func TestDataVerification(t *testing.T) {
 
 	poh := poh_hash.New(wallet_path, db_path)
-	data, err := os.ReadFile("../../config/sync-data-validation.json")
+	data, err := os.ReadFile("../../config/tests/sync-data-validation.json")
 
 	if err != nil {
 		t.Error(err)
@@ -52,7 +52,7 @@ func TestDataVerification(t *testing.T) {
 func TestVerification(t *testing.T) {
 
 	poh := poh_hash.New(wallet_path, db_path)
-	data, err := os.ReadFile("../../config/sync-validation.json")
+	data, err := os.ReadFile("../../config/tests/sync-validation.json")
 
 	if err != nil {
 		t.Error(err)

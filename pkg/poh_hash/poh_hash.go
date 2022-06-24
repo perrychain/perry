@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"runtime"
 	"sync"
@@ -17,6 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/perrychain/perry/pkg/blockdb"
 	"github.com/perrychain/perry/pkg/wallet"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var genisis_hash string
@@ -75,7 +76,7 @@ func New(wallet_path, db_path string) (this POH) {
 	this.TickRate = 1_000_000
 
 	if wallet_path == "" {
-		wallet_path = ".wallet.json"
+		wallet_path = ".perry-wallet.json"
 	}
 
 	var err error
@@ -85,13 +86,13 @@ func New(wallet_path, db_path string) (this POH) {
 		err = this.Wallet.GenerateWallet()
 
 		if err != nil {
-			log.Fatalf("Could not create wallet %s", err)
+			log.Fatal("Could not create wallet %s", err)
 		}
 
 		err = this.Wallet.Save(wallet_path, false)
 
 		if err != nil {
-			log.Fatalf("Could not save wallet file %s (%s)", wallet_path, err)
+			log.Fatal("Could not save wallet file %s (%s)", wallet_path, err)
 		}
 
 	}
@@ -136,13 +137,13 @@ func (poh *POH) GeneratePOH(count uint64) {
 	err := poh.BlockDB.Open()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(fmt.Sprintf("Could not open BlockDB: %s", err))
 	}
 
 	err = poh.BlockDB.Verify()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(fmt.Sprintf("Could not verify BlockDB: %s", err))
 	}
 
 	poh.currentBlock.Payload = make([]blockdb.TxPayload, 0)
@@ -152,14 +153,14 @@ func (poh *POH) GeneratePOH(count uint64) {
 		key := poh.BlockDB.Blocks[len(poh.BlockDB.Blocks)-1].Key
 		h.Write(key[:])
 
-		//fmt.Println("Using last block hash => ", key)
+		log.Debug("Using last block hash => ", key)
 
 	} else {
 		// TODO: Geneisis + wallet public-key + timestamp + rand number
 		genisis_hash := fmt.Sprintf("GENESIS_HASH-%d-%s", time.Now().UnixNano(), base64.StdEncoding.EncodeToString(poh.Wallet.PrivateKey))
 		h.Write([]byte(genisis_hash))
 
-		//fmt.Println("Using Genesis Hash => ", genisis_hash)
+		log.Debug("Using Genesis Hash => ", genisis_hash)
 
 	}
 
@@ -185,7 +186,7 @@ func (poh *POH) GeneratePOH(count uint64) {
 				return
 			case <-ticker.C:
 				pohBlock <- POH_Block{Block: uint64(blockid)}
-				//fmt.Println("Tick at", t, " Block ID", blockid)
+				log.Debug("Tick for Block ID", blockid)
 				blockid++
 			}
 		}
@@ -201,7 +202,7 @@ func (poh *POH) GeneratePOH(count uint64) {
 		t := i % uint64(poh.TickRate)
 
 		// Create a new hash from a data request
-		if chk == true {
+		if chk {
 			h.Write(append(prevhash, block.Data...))
 			prevhash = h.Sum(nil)
 
@@ -218,8 +219,6 @@ func (poh *POH) GeneratePOH(count uint64) {
 			payload.Signature = block.Signature
 			payload.Recipient = block.Recipient
 			payload.Sender = block.Sender
-
-			//poh.Wallet.PublicKey
 
 			poh.currentBlock.Payload = append(poh.currentBlock.Payload, payload)
 
@@ -245,7 +244,6 @@ func (poh *POH) GeneratePOH(count uint64) {
 
 	poh.HashRate = uint32(float64(count) * (1 / elapsed.Seconds()))
 
-	return
 }
 
 func (poh *POH) VerifyPOH(cpu_cores int) (err error) {
@@ -271,11 +269,11 @@ func (poh *POH) VerifyPOH(cpu_cores int) (err error) {
 	var error_abort bool
 
 	for i := uint64(1); i < tasks; i++ {
-		//fmt.Println("Job started => ", i, tasks)
+		log.Debug("Job started => ", i, tasks)
 		n := i
 		pool.Submit(func() {
 
-			//fmt.Println("Job fork => ", n)
+			log.Debug("Job fork => ", n)
 
 			seqstart := poh.POH[0].Entry[n-1].Seq
 			seqend := poh.POH[0].Entry[n].Seq
@@ -307,7 +305,7 @@ func (poh *POH) VerifyPOH(cpu_cores int) (err error) {
 
 						if !verify {
 							error_abort = true
-							log.Printf("POH data signature failed, sequence ID %d - Calculated (%s)", poh.POH[0].Entry[n].Seq, poh.POH[0].Entry[n].Signature)
+							log.Warn("POH data signature failed, sequence ID %d - Calculated (%s)", poh.POH[0].Entry[n].Seq, poh.POH[0].Entry[n].Signature)
 						}
 
 					}
@@ -322,7 +320,7 @@ func (poh *POH) VerifyPOH(cpu_cores int) (err error) {
 
 					if compare != 0 {
 						error_abort = true
-						log.Printf("POH Verification failed, sequence ID %d - Calculated (%s) vs Reference (%s)", poh.POH[0].Entry[n].Seq, base64.RawStdEncoding.EncodeToString(h.Sum(nil)), base64.RawStdEncoding.EncodeToString(orig))
+						log.Warn("POH Verification failed, sequence ID %d - Calculated (%s) vs Reference (%s)", poh.POH[0].Entry[n].Seq, base64.RawStdEncoding.EncodeToString(h.Sum(nil)), base64.RawStdEncoding.EncodeToString(orig))
 						// TODO: Improve stopping existing workers in the queue, revise.
 
 					}
@@ -345,10 +343,10 @@ func (poh *POH) VerifyPOH(cpu_cores int) (err error) {
 	poh.VerifyHashRate = uint32(float64(lastSeq.Seq) * (1 / elapsed.Seconds()))
 	poh.VerifyHashRatePerCore = poh.VerifyHashRate / uint32(cpu_cores)
 
-	//fmt.Printf("VerifyPOH > VerifyHashRate = %d\n", poh.VerifyHashRate)
-	//fmt.Printf("VerifyPOH > VerifyHashRatePerCore = %d\n", poh.VerifyHashRatePerCore)
+	log.Debug("VerifyPOH > VerifyHashRate = %d\n", poh.VerifyHashRate)
+	log.Debug("VerifyPOH > VerifyHashRatePerCore = %d\n", poh.VerifyHashRatePerCore)
 
-	if error_abort == true {
+	if error_abort {
 		return errors.New("POH validation failed")
 	}
 
@@ -369,14 +367,14 @@ func (poh *POH) BlockConfirmation(block chan POH_Block) {
 		current_block := <-block
 
 		if len(poh.currentBlock.Payload) == 0 {
-			//fmt.Println("No blocks to write to disk ...")
+			log.Debug("No blocks to write to disk ...")
 			continue
 		}
 
 		start := time.Now()
 		blockLen := len(poh.currentBlock.Payload)
 
-		fmt.Printf("Writing block (%d) to disk for (%d) TX's ... ", current_block, blockLen)
+		log.Info("Writing block (%d) to disk for (%d) TX's ... ", current_block, blockLen)
 
 		poh.Mu.Lock()
 		payload, err := json.Marshal(poh.currentBlock.Payload)
@@ -403,7 +401,7 @@ func (poh *POH) BlockConfirmation(block chan POH_Block) {
 
 		txRate := uint32(float64(blockLen) * (1 / elapsed.Seconds()))
 
-		fmt.Printf("done in %s, %d per sec\n", elapsed, txRate)
+		log.Info("done in %s, %d per sec\n", elapsed, txRate)
 
 	}
 
@@ -545,12 +543,12 @@ func (poh *POH) Verify(c *gin.Context) {
 
 	defer resp.Body.Close()
 
-	fmt.Println("Response status:", resp.Status)
+	log.Debug("Response status:", resp.Status)
 
 	timer := time.Now()
 	elapsed := timer.Sub(start)
 
-	fmt.Printf("Fetch syncdata %s\n", elapsed)
+	log.Debug("Fetch syncdata %s\n", elapsed)
 
 	var valid struct {
 		PublicKey string
@@ -564,7 +562,7 @@ func (poh *POH) Verify(c *gin.Context) {
 	timer = time.Now()
 	elapsed = timer.Sub(start)
 
-	fmt.Printf("Decode syncdata %s\n", elapsed)
+	log.Debug("Decode syncdata %s\n", elapsed)
 
 	confirmation := POH{}
 	pubkey, _ := base64.StdEncoding.DecodeString(validator.PublicKey)
@@ -577,20 +575,20 @@ func (poh *POH) Verify(c *gin.Context) {
 	timer = time.Now()
 	elapsed = timer.Sub(start)
 
-	fmt.Printf("Prepare syncdata %s\n", elapsed)
+	log.Debug("Prepare syncdata %s\n", elapsed)
 
 	err = confirmation.VerifyPOH(runtime.NumCPU())
 
 	timer = time.Now()
 	elapsed = timer.Sub(start)
 
-	fmt.Printf("Verify syncdata %s\n", elapsed)
+	log.Info("Verify syncdata %s\n", elapsed)
 
 	if err == nil {
 		c.JSON(200, gin.H{"Status": "OK", "Stats": fmt.Sprintf("Hash Rate (all cores) %d - Hash Rate per core %d", confirmation.VerifyHashRate, confirmation.VerifyHashRatePerCore)})
 	} else {
 		c.JSON(500, gin.H{"Status": "fail"})
-		fmt.Println("VerifyPOH error =>", err)
+		log.Warn("VerifyPOH error =>", err)
 	}
 
 }

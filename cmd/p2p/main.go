@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/perrychain/perry/pkg/p2pnet"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 
 	if *server > 0 {
 
-		fmt.Println("Launching server")
+		log.Info("Launching server")
 
 		go func() {
 			p2p.Listen(p2p.MsgHandler)
@@ -46,7 +47,7 @@ func main() {
 
 	} else {
 
-		fmt.Println("Launching client")
+		log.Info("Launching client")
 
 		for i := 0; i < *num; i++ {
 			p2p.Send(fmt.Sprintf("%d", i))

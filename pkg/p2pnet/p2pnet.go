@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -17,6 +16,7 @@ import (
 	"github.com/perrychain/perry/pkg/blockdb"
 	"github.com/perrychain/perry/pkg/poh_hash"
 	"github.com/perrychain/perry/pkg/wallet"
+	log "github.com/sirupsen/logrus"
 )
 
 // "Safe" UDP packet size up to 508 bytes
@@ -76,9 +76,6 @@ func New(p P2P) *P2P {
 	p.RPC_Peers["127.0.0.1:24816"] = Node{Host: "127.0.0.1", Port: 24816, Bootstrap: true}
 
 	return &p
-
-	//node := Node{Port: 15500, Version: 1, Host: "224.0.0.1"}
-	//return &P2P{P2P_Node: node, maxDatagramSize: 8192}
 }
 
 // Listen on the specified UDP port for P2P blockchain traffic
@@ -86,7 +83,7 @@ func (p2p *P2P) Listen(h func(*net.UDPAddr, int, []byte)) {
 
 	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", p2p.P2P_Node.Host, p2p.P2P_Node.Port))
 
-	fmt.Println("P2P => Listen => ", addr)
+	log.Debug("P2P.Listen => ", addr)
 
 	if err != nil {
 		log.Fatal(err)
@@ -112,7 +109,7 @@ func (p2p *P2P) Listen(h func(*net.UDPAddr, int, []byte)) {
 		b := make([]byte, p2p.maxDatagramSize)
 		n, src, err := l.ReadFromUDP(b)
 		if err != nil {
-			log.Fatal("ReadFromUDP failed:", err)
+			log.Warn("ReadFromUDP failed:", err)
 		}
 		h(src, n, b)
 	}
@@ -171,31 +168,30 @@ func (p2p *P2P) Send(data string) {
 
 // Process a UDP packet into the queue
 func (p2p *P2P) MsgHandler(src *net.UDPAddr, n int, b []byte) {
-	//log.Println(n, "bytes read from", src)
-	//log.Println(hex.Dump(b[:n]))
+	log.Debug(n, "bytes read from", src)
 
 	packet := Packet{}
 
 	r := bytes.NewReader(b)
 
 	if err := binary.Read(r, binary.BigEndian, &packet); err != nil {
-		fmt.Println("failed to Read:", err)
+		log.Warn("failed to Read:", err)
 		return
 	}
 
 	// Only accept blocks that are valid
 	if len(packet.SenderPublicKey) == 0 {
-		fmt.Println("Ignoring packet, no sender:")
+		log.Warn("Ignoring packet, no sender:")
 		return
 	}
 
 	if len(packet.RecipientPublicKey) == 0 {
-		fmt.Println("Ignoring packet, no recipient:")
+		log.Warn("Ignoring packet, no recipient:")
 		return
 	}
 
 	if len(packet.Payload) == 0 {
-		fmt.Println("Ignoring packet, no data:")
+		log.Warn("Ignoring packet, no data:")
 		return
 	}
 
@@ -216,7 +212,7 @@ func (p2p *P2P) MsgHandler(src *net.UDPAddr, n int, b []byte) {
 		p2p.POH.Mu.Unlock()
 
 	} else {
-		fmt.Println("Ignoring packet, signature failure")
+		log.Warn("Ignoring packet, signature failure")
 		return
 	}
 
@@ -247,10 +243,10 @@ func (p2p *P2P) doSync() {
 	for host := range p2p.RPC_Peers {
 
 		if myNode == host {
-			fmt.Println("Host, skipping my node => ", host)
+			log.Info("Host, skipping my node => ", host)
 
 		} else {
-			fmt.Println("Host, Query blocks etc => ", host)
+			log.Info("Host, Query blocks etc => ", host)
 			p2p.querySync(host)
 
 		}
@@ -272,18 +268,18 @@ func (p2p *P2P) querySync(hostname string) {
 	resp, err := http.Get(fmt.Sprintf("http://%s/p2p/status?rpc_host=%s&rpc_port=%d", hostname, p2p.RPC_Node.Host, p2p.RPC_Node.Port))
 
 	if err != nil {
-		fmt.Println("Error connecting for status => ", err)
+		log.Warn("Error connecting for status => ", err)
 		return
 	}
 
 	defer resp.Body.Close()
 
-	fmt.Println("Response status:", resp.Status)
+	log.Info("Response status:", resp.Status)
 
 	timer := time.Now()
 	elapsed := timer.Sub(start)
 
-	fmt.Printf("Fetch syncdata %s\n", elapsed)
+	log.Info("Fetch syncdata %s\n", elapsed)
 
 	remoteStatus := Status{}
 
@@ -292,20 +288,18 @@ func (p2p *P2P) querySync(hostname string) {
 	timer = time.Now()
 	elapsed = timer.Sub(start)
 
-	//fmt.Println("remoteStatus =>", remoteStatus)
-
 	if bytes.Compare(latestBlock.Key[:], remoteStatus.Hash) == 0 && (latestBlock.Value.Header.SeqID == remoteStatus.SeqID) {
 
-		fmt.Println("GetLatestBlock matches from local to remote, skipping sync.")
+		log.Info("GetLatestBlock matches from local to remote, skipping sync.")
 	} else if remoteStatus.SeqID > latestBlock.Value.Header.SeqID {
-		fmt.Printf("Remote has larger SeqID (%d) vs local (%d) - Syncing\n", remoteStatus.SeqID, latestBlock.Value.Header.SeqID)
+		log.Info("Remote has larger SeqID (%d) vs local (%d) - Syncing\n", remoteStatus.SeqID, latestBlock.Value.Header.SeqID)
 		p2p.stateSync(hostname, latestBlock.Key)
 
 	} else if latestBlock.Value.Header.SeqID > remoteStatus.SeqID {
-		fmt.Printf("Local has larger SeqID (%d) vs remote (%d) - Skipping\n", latestBlock.Value.Header.SeqID, remoteStatus.SeqID)
+		log.Info("Local has larger SeqID (%d) vs remote (%d) - Skipping\n", latestBlock.Value.Header.SeqID, remoteStatus.SeqID)
 
 	} else {
-		fmt.Printf("querySync => Unknown state. Local (%d) Remote (%d)", latestBlock.Value.Header.SeqID, remoteStatus.SeqID)
+		log.Info("querySync => Unknown state. Local (%d) Remote (%d)", latestBlock.Value.Header.SeqID, remoteStatus.SeqID)
 
 	}
 
@@ -321,13 +315,13 @@ func (p2p *P2P) stateSync(hostname string, hash blockdb.Hash) {
 	resp, err := http.Get(fmt.Sprintf("http://%s/p2p/sync?from=%s", hostname, url.QueryEscape(hashB64)))
 
 	if err != nil {
-		fmt.Println("Error connecting for status => ", err)
+		log.Warn("Error connecting for status => ", err)
 		return
 	}
 
 	defer resp.Body.Close()
 
-	fmt.Println("Response status:", resp.StatusCode)
+	log.Debug("Response status:", resp.StatusCode)
 
 	syncBlocks := blockdb.SyncBlocks{}
 
@@ -336,9 +330,7 @@ func (p2p *P2P) stateSync(hostname string, hash blockdb.Hash) {
 	timer := time.Now()
 	elapsed := timer.Sub(start)
 
-	fmt.Printf("Prepare stateSync %s\n", elapsed)
-
-	//fmt.Println("remoteStatus =>", syncBlocks)
+	log.Info("Prepare stateSync %s\n", elapsed)
 
 	blockLen := len(syncBlocks.Blocks)
 
@@ -397,11 +389,9 @@ func (p2p *P2P) stateSync(hostname string, hash blockdb.Hash) {
 
 		txRate := uint32(float64(blockLen) * (1 / elapsed.Seconds()))
 
-		fmt.Printf("Sync Blocks done in %s, %d per sec\n", elapsed, txRate)
+		log.Info("Sync Blocks done in %s, %d per sec\n", elapsed, txRate)
 
 	}
-
-	//SyncBlocks
 
 }
 
@@ -420,7 +410,7 @@ func (p2p *P2P) Status(c *gin.Context) {
 		// TODO: Confirm correct end-point
 		rpc_addr := fmt.Sprintf("%s:%s", rpc_host, rpc_port)
 
-		fmt.Println("Adding RPC Addr => ", rpc_addr)
+		log.Debug("Adding RPC Addr => ", rpc_addr)
 
 		if p2p.RPC_Peers[rpc_addr].Host == "" {
 			// New host, append to our stack
@@ -455,7 +445,7 @@ func (p2p *P2P) Sync(c *gin.Context) {
 
 	fromBytes, _ := base64.StdEncoding.DecodeString(from)
 
-	fmt.Println("fromBytes => ", fromBytes)
+	log.Debug("fromBytes => ", fromBytes)
 
 	blockID := p2p.POH.BlockDB.Sync(fromBytes)
 

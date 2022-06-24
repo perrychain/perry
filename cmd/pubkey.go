@@ -11,12 +11,12 @@ import (
 // pubkeyCmd represents the pubkey command
 var pubkeyCmd = &cobra.Command{
 	Use:   "pubkey",
-	Short: "View a wallets public key",
+	Short: "View a specified wallet public key",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		path, _ := cmd.Flags().GetString("path")
+		walletPath, _ := cmd.Flags().GetString("wallet")
 
-		mywallet, _ := wallet.Load(path)
+		mywallet, _ := wallet.Load(walletPath)
 
 		fmt.Printf("%s\n", base64.StdEncoding.EncodeToString(mywallet.PublicKey))
 
@@ -26,5 +26,4 @@ var pubkeyCmd = &cobra.Command{
 func init() {
 	keygenCmd.AddCommand(pubkeyCmd)
 
-	pubkeyCmd.Flags().StringP("path", "p", ".wallet.json", "Wallet filename")
 }
