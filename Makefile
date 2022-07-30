@@ -1,10 +1,17 @@
-GO_PROJECT_NAME := poh-golang
+GO_PROJECT_NAME := perry
 
 # GO commands
 go_build:
 	@echo "\n....Building $(GO_PROJECT_NAME)"
 	go build -ldflags "-s -w" -o ./bin/ ./cmd/poh-golang
 	go build -ldflags "-s -w" -o ./bin/perry main.go
+	go build -ldflags "-s -w" -o ./bin/mock ./cmd/p2p/main.go
+	go build -ldflags "-s -w" -o ./bin/ ./cmd/perryctl
+
+go_utils:
+	@echo "\n....Building $(GO_PROJECT_NAME)"
+	go build -ldflags "-s -w" -o ./bin/ ./cmd/perryctl
+
 
 go_dep_install:
 	@echo "\n....Installing dependencies for $(GO_PROJECT_NAME)...."
