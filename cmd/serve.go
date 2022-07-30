@@ -36,7 +36,7 @@ var serveCmd = &cobra.Command{
 			log.Fatal(fmt.Sprintf("Wallet %s could not be opened (%s)", walletPath, err))
 		}
 
-		log.Info("Launching RPC service on %s:%d\n", rpc_ip, rpc_port)
+		log.Info(fmt.Sprintf("Launching RPC service on %s:%d\n", rpc_ip, rpc_port))
 
 		rpc_node := p2pnet.Node{Port: rpc_port, Host: rpc_ip}
 		p2p_node := p2pnet.Node{Port: p2p_port, Host: p2p_ip}

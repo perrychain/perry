@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -130,7 +131,7 @@ func (blockdb *BlockDB) Verify() (err error) {
 
 	blockdb.Mu.RLock()
 
-	log.Debug("Verifying (%d) block signatures on disk ...", len(blockdb.Blocks))
+	log.Debug(fmt.Sprintf("Verifying (%d) block signatures on disk ...", len(blockdb.Blocks)))
 
 	var currentHash Hash
 

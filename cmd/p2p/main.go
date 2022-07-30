@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os/user"
 	"time"
 
 	"github.com/perrychain/perry/pkg/p2pnet"
+	"github.com/perrychain/perry/pkg/wallet"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,6 +21,12 @@ func main() {
 
 	var p2p_host = flag.String("p2phost", "127.0.0.1", "P2P Host")
 	var p2p_port = flag.Uint("p2pport", 16842, "P2P Port")
+
+	usr, _ := user.Current()
+	defaultHomeDir := fmt.Sprintf("%s/.perry", usr.HomeDir)
+	defaultWalletPath := fmt.Sprintf("%s/.wallet.json", defaultHomeDir)
+
+	var walletPath = flag.String("wallet", defaultWalletPath, "Specify wallet path")
 
 	flag.Parse()
 
@@ -49,8 +57,15 @@ func main() {
 
 		log.Info("Launching client")
 
+		senderwallet, err := wallet.Load(*walletPath)
+
+		if err != nil {
+			log.Warn("No wallet specified, generating new one\n")
+			senderwallet.GenerateWallet()
+		}
+
 		for i := 0; i < *num; i++ {
-			p2p.Send(fmt.Sprintf("%d", i))
+			p2p.Send(senderwallet, fmt.Sprintf("%d", i))
 			time.Sleep(1 * time.Millisecond)
 		}
 

@@ -20,9 +20,15 @@
 # Misc
 .DS_Store
 
+# c *.o files
+*.o
+
 # Perry specific
+bin/*
 .wallet.json
 config/blockchain-db.json
 .blockchain-db.json
+.perry-wallet.json
+.blockchain.db
 bin/perry
 bin/poh-golang

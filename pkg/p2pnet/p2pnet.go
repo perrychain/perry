@@ -117,7 +117,7 @@ func (p2p *P2P) Listen(h func(*net.UDPAddr, int, []byte)) {
 }
 
 // Send a packet on the P2P network via UDP
-func (p2p *P2P) Send(data string) {
+func (p2p *P2P) Send(senderwallet wallet.Wallet, data string) {
 
 	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", p2p.P2P_Node.Host, p2p.P2P_Node.Port))
 
@@ -131,25 +131,28 @@ func (p2p *P2P) Send(data string) {
 		log.Fatal(err)
 	}
 
-	mywallet := wallet.New()
-	mywallet.GenerateWallet()
-
-	senderwallet := wallet.New()
-	senderwallet.GenerateWallet()
+	// TODO: Pass the recipient public key in the function
+	rcptwallet := wallet.New()
+	rcptwallet.GenerateWallet()
 
 	packet := Packet{}
 
 	packet.Version = [1]byte{1}
 	packet.Reserved = [3]byte{0, 0, 0}
 
-	copy(packet.SenderPublicKey[:], mywallet.PublicKey)
-	copy(packet.RecipientPublicKey[:], mywallet.PublicKey)
+	copy(packet.RecipientPublicKey[:], rcptwallet.PublicKey)
+	copy(packet.SenderPublicKey[:], senderwallet.PublicKey)
 
-	msg := []byte(fmt.Sprintf("%s WOW A super important message here for you to consider %s", time.Now(), data))
+	// Create the payload (test data)
+	// TODO: Copy just the msg and encrypt using the recipient public key
+	copy(packet.Payload[:], []byte(fmt.Sprintf("%s WOW A super important message here for you to consider %s", time.Now(), data)))
 
-	copy(packet.Payload[:], msg)
+	signature, err := senderwallet.Sign(packet.Payload[:])
 
-	signature, _ := mywallet.Sign(packet.Payload[:])
+	if err != nil {
+		log.Warn(fmt.Sprintf("Failed to sign msg transaction: %s", err))
+		return
+	}
 
 	copy(packet.SenderSignature[:], signature)
 
@@ -255,7 +258,7 @@ func (p2p *P2P) doSync() {
 
 }
 
-// Query the status of the remote RCP peer, check if block higher then local for sync
+// Query the status of the remote RPC peer, check if block higher then local for sync
 func (p2p *P2P) querySync(hostname string) {
 
 	start := time.Now()
@@ -264,7 +267,6 @@ func (p2p *P2P) querySync(hostname string) {
 	latestBlock := p2p.POH.BlockDB.GetLatestBlock()
 
 	// Query our external host
-
 	resp, err := http.Get(fmt.Sprintf("http://%s/p2p/status?rpc_host=%s&rpc_port=%d", hostname, p2p.RPC_Node.Host, p2p.RPC_Node.Port))
 
 	if err != nil {
@@ -279,7 +281,7 @@ func (p2p *P2P) querySync(hostname string) {
 	timer := time.Now()
 	elapsed := timer.Sub(start)
 
-	log.Info("Fetch syncdata %s\n", elapsed)
+	log.Info(fmt.Sprintf("Fetch syncdata %s\n", elapsed))
 
 	remoteStatus := Status{}
 
@@ -292,14 +294,14 @@ func (p2p *P2P) querySync(hostname string) {
 
 		log.Info("GetLatestBlock matches from local to remote, skipping sync.")
 	} else if remoteStatus.SeqID > latestBlock.Value.Header.SeqID {
-		log.Info("Remote has larger SeqID (%d) vs local (%d) - Syncing\n", remoteStatus.SeqID, latestBlock.Value.Header.SeqID)
+		log.Info(fmt.Sprintf("Remote has larger SeqID (%d) vs local (%d) - Syncing\n", remoteStatus.SeqID, latestBlock.Value.Header.SeqID))
 		p2p.stateSync(hostname, latestBlock.Key)
 
 	} else if latestBlock.Value.Header.SeqID > remoteStatus.SeqID {
-		log.Info("Local has larger SeqID (%d) vs remote (%d) - Skipping\n", latestBlock.Value.Header.SeqID, remoteStatus.SeqID)
+		log.Info(fmt.Sprintf("Local has larger SeqID (%d) vs remote (%d) - Skipping\n", latestBlock.Value.Header.SeqID, remoteStatus.SeqID))
 
 	} else {
-		log.Info("querySync => Unknown state. Local (%d) Remote (%d)", latestBlock.Value.Header.SeqID, remoteStatus.SeqID)
+		log.Info(fmt.Sprintf("querySync => Unknown state. Local (%d) Remote (%d)", latestBlock.Value.Header.SeqID, remoteStatus.SeqID))
 
 	}
 
@@ -330,7 +332,7 @@ func (p2p *P2P) stateSync(hostname string, hash blockdb.Hash) {
 	timer := time.Now()
 	elapsed := timer.Sub(start)
 
-	log.Info("Prepare stateSync %s\n", elapsed)
+	log.Info(fmt.Sprintf("Prepare stateSync %s\n", elapsed))
 
 	blockLen := len(syncBlocks.Blocks)
 
@@ -389,7 +391,7 @@ func (p2p *P2P) stateSync(hostname string, hash blockdb.Hash) {
 
 		txRate := uint32(float64(blockLen) * (1 / elapsed.Seconds()))
 
-		log.Info("Sync Blocks done in %s, %d per sec\n", elapsed, txRate)
+		log.Info(fmt.Sprintf("Sync Blocks done in %s, %d per sec\n", elapsed, txRate))
 
 	}
 
