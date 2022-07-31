@@ -32,3 +32,6 @@ config/blockchain-db.json
 .blockchain.db
 bin/perry
 bin/poh-golang
+
+# Performance library
+performance/bin/*

@@ -1,0 +1,4 @@
+testing seed generation performance: 1.102700us per seed
+testing key generation performance: 14.076400us per keypair
+testing sign performance: 24.890500us per signature
+testing verify performance: 36.810000us per signature

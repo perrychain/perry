@@ -1,0 +1,11 @@
+goos: darwin
+goarch: arm64
+Benchmark_RandomArray-8            	 1000000	     11244 ns/op	     450 B/op	      12 allocs/op
+Benchmark_MapCreation-8            	 1000000	       424.1 ns/op	     259 B/op	       6 allocs/op
+Benchmark_MapRandomAccess-8        	 1000000	       107.7 ns/op	       0 B/op	       0 allocs/op
+Benchmark_TD_BtreeCreation-8       	 1000000	      1201 ns/op	     321 B/op	       7 allocs/op
+Benchmark_TD_BtreeRandomAccess-8   	 1000000	       858.4 ns/op	       0 B/op	       0 allocs/op
+Benchmark_TreeCreation-8           	 1000000	      2114 ns/op	     326 B/op	      11 allocs/op
+Benchmark_TreeRandomAccess-8       	 1000000	      1943 ns/op	      16 B/op	       1 allocs/op
+PASS
+ok  	command-line-arguments	21.802s

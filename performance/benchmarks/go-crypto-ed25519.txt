@@ -1,0 +1,7 @@
+goos: darwin
+goarch: arm64
+Benchmark_GenerateWallet-8   	   10000	     20164 ns/op
+Benchmark_Sign-8             	   10000	     23055 ns/op
+Benchmark_Verify-8           	   10000	     51957 ns/op
+PASS
+ok  	command-line-arguments	1.067s

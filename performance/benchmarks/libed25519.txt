@@ -1,0 +1,12 @@
+valid signature
+valid signature
+consttime_equal failed
+correctly detected signature change
+key exchange was correct
+testing seed generation performance: 80.228300us per seed
+testing key generation performance: 25.514000us per keypair
+testing sign performance: 26.163500us per signature
+testing verify performance: 80.996500us per signature
+testing keypair scalar addition performance: 25.536600us per keypair
+testing public key scalar addition performance: 30.970300us per key
+testing key exchange performance: 74.297200us per shared secret

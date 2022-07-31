@@ -73,3 +73,33 @@ func TestGenerateWalletAndSign(t *testing.T) {
 	assert.Equal(t, status, false)
 
 }
+
+func Benchmark_GenerateWallet(b *testing.B) {
+
+	for n := 0; n < b.N; n++ {
+		mywallet := wallet.New()
+		mywallet.GenerateWallet()
+	}
+}
+
+func Benchmark_Sign(b *testing.B) {
+
+	mywallet := wallet.New()
+	mywallet.GenerateWallet()
+
+	for n := 0; n < b.N; n++ {
+		mywallet.Sign([]byte("Hello, world!"))
+	}
+}
+
+func Benchmark_Verify(b *testing.B) {
+
+	mywallet := wallet.New()
+	mywallet.GenerateWallet()
+
+	sig, _ := mywallet.Sign([]byte("Hello, world!"))
+
+	for n := 0; n < b.N; n++ {
+		mywallet.Verify([]byte("Hello, world!"), sig)
+	}
+}
