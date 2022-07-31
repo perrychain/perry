@@ -19,19 +19,24 @@
 
 # Misc
 .DS_Store
+.vscode
+
+# Perry specific
+.wallet.json
+config/blockchain-db.json
+.blockchain-db.json*
+.perry-wallet.json
+.blockchain.db
+bin/perry
+bin/perryctl
+bin/poh-golang
+
+# Performance library
+performance/bin/perry-verify-*
+performance/bin/verify-*
+performance/benchmarks/*.txt
 
 # c *.o files
 *.o
 
-# Perry specific
-bin/*
-.wallet.json
-config/blockchain-db.json
-.blockchain-db.json
-.perry-wallet.json
-.blockchain.db
-bin/perry
-bin/poh-golang
 
-# Performance library
-performance/bin/*

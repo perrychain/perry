@@ -38,7 +38,7 @@ make build_gpu
 
 ## GO map vs B-tree 
 
-Benchmark a standard GO map which contains N unique elements (SHA256 sum, base64 encoded) and compare the differences using two different B-tree implementations [github.com/tidwall/btree](github.com/tidwall/btree) and [github.com/emirpasic/gods/trees/btree](github.com/emirpasic/gods/trees/btree) for inserting and fetching N unique elements.
+Benchmark a standard GO map which contains N unique elements (SHA256 sum, base64 encoded) and compare the differences using two different B-tree implementations [github.com/tidwall/btree](https://github.com/tidwall/btree) and [github.com/emirpasic/gods/trees/btree](https://github.com/emirpasic/gods/trees/btree) for inserting and fetching N unique elements.
 
 Future scope for fetching a range of users messages from a specified public-key using a map or b-tree implementation within Perry.
 
